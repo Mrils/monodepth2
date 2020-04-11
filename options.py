@@ -26,6 +26,7 @@ class MonodepthOptions:
                                  help="log directory",
                                  default=os.path.join(os.path.expanduser("~"), "tmp"))
 
+
         # TRAINING options
         self.parser.add_argument("--model_name",
                                  type=str,

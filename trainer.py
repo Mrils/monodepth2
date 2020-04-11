@@ -25,6 +25,8 @@ import datasets
 import networks
 from IPython import embed
 
+from networks.models import ResNet_DLF
+
 
 class Trainer:
     def __init__(self, options):
@@ -51,8 +53,10 @@ class Trainer:
         if self.opt.use_stereo:
             self.opt.frame_ids.append("s")
 
-        self.models["encoder"] = networks.ResnetEncoder(
-            self.opt.num_layers, self.opt.weights_init == "pretrained")
+        # self.models["encoder"] = networks.ResnetEncoder(
+        #     self.opt.num_layers, self.opt.weights_init == "pretrained")
+        self.models["encoder"] = ResNet_DLF(
+            self.opt.num_layers, self.opt.num_layers)
         self.models["encoder"].to(self.device)
         self.parameters_to_train += list(self.models["encoder"].parameters())
 
