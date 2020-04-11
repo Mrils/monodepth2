@@ -25,7 +25,7 @@ import datasets
 import networks
 from IPython import embed
 
-from networks.models import ResNet_DLF
+from networks.models import resnet_encoder_dlf
 
 
 class Trainer:
@@ -55,7 +55,7 @@ class Trainer:
 
         # self.models["encoder"] = networks.ResnetEncoder(
         #     self.opt.num_layers, self.opt.weights_init == "pretrained")
-        self.models["encoder"] = ResNet_DLF(
+        self.models["encoder"] = resnet_encoder_dlf.ResNet_DLF(
             self.opt.num_layers, self.opt.num_layers)
         self.models["encoder"].to(self.device)
         self.parameters_to_train += list(self.models["encoder"].parameters())
