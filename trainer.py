@@ -11,6 +11,7 @@ import time
 
 import torch
 import torch.nn.functional as F
+import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from tensorboardX import SummaryWriter
@@ -59,13 +60,14 @@ class Trainer:
         else:
             self.models["encoder"] = resnet_encoder_dlf.ResNet_DLF(
                 self.opt.num_layers, self.opt.num_layers)
-        self.models["encoder"].to(self.device)
+        # self.models["encoder"].to(self.device)
         self.parameters_to_train += list(self.models["encoder"].parameters())
 
         self.models["depth"] = networks.DepthDecoder(
             self.models["encoder"].num_ch_enc, self.opt.scales)
-        self.models["depth"].to(self.device)
+        # self.models["depth"].to(self.device)
         self.parameters_to_train += list(self.models["depth"].parameters())
+
 
         if self.use_pose_net:
             if self.opt.pose_model_type == "separate_resnet":
@@ -74,13 +76,15 @@ class Trainer:
                     self.opt.weights_init == "pretrained",
                     num_input_images=self.num_pose_frames)
 
-                self.models["pose_encoder"].to(self.device)
-                self.parameters_to_train += list(self.models["pose_encoder"].parameters())
+                # self.models["pose_encoder"].to(self.device)
 
                 self.models["pose"] = networks.PoseDecoder(
                     self.models["pose_encoder"].num_ch_enc,
                     num_input_features=1,
                     num_frames_to_predict_for=2)
+
+                self.models["pose_encoder"] = nn.DataParallel(self.models["pose_encoder"]).cuda()
+                self.parameters_to_train += list(self.models["pose_encoder"].parameters())
 
             elif self.opt.pose_model_type == "shared":
                 self.models["pose"] = networks.PoseDecoder(
@@ -90,7 +94,8 @@ class Trainer:
                 self.models["pose"] = networks.PoseCNN(
                     self.num_input_frames if self.opt.pose_model_input == "all" else 2)
 
-            self.models["pose"].to(self.device)
+            self.models["pose"] = nn.DataParallel(self.models["pose"]).cuda()
+            # self.models["pose"].to(self.device)
             self.parameters_to_train += list(self.models["pose"].parameters())
 
         if self.opt.predictive_mask:
@@ -105,6 +110,8 @@ class Trainer:
             self.models["predictive_mask"].to(self.device)
             self.parameters_to_train += list(self.models["predictive_mask"].parameters())
 
+        self.models["encoder"] = nn.DataParallel(self.models["encoder"]).cuda()
+        self.models["depth"] = nn.DataParallel(self.models["depth"]).cuda()
         self.model_optimizer = optim.Adam(self.parameters_to_train, self.opt.learning_rate)
         self.model_lr_scheduler = optim.lr_scheduler.StepLR(
             self.model_optimizer, self.opt.scheduler_step_size, 0.1)
@@ -199,8 +206,6 @@ class Trainer:
     def run_epoch(self):
         """Run a single epoch of training and validation
         """
-        self.model_lr_scheduler.step()
-
         print("Training")
         self.set_train()
 
@@ -230,6 +235,8 @@ class Trainer:
                 self.val()
 
             self.step += 1
+        self.model_lr_scheduler.step()
+        
 
     def process_batch(self, inputs):
         """Pass a minibatch through the network and generate images and losses
