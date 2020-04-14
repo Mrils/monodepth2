@@ -23,14 +23,15 @@ class PoseDecoder(nn.Module):
         self.num_frames_to_predict_for = num_frames_to_predict_for
 
         self.convs = OrderedDict()
+        self.convs = nn.ModuleDic()
         self.convs[("squeeze")] = nn.Conv2d(self.num_ch_enc[-1], 256, 1)
-        self.convs[("pose", 0)] = nn.Conv2d(num_input_features * 256, 256, 3, stride, 1)
-        self.convs[("pose", 1)] = nn.Conv2d(256, 256, 3, stride, 1)
-        self.convs[("pose", 2)] = nn.Conv2d(256, 6 * num_frames_to_predict_for, 1)
+        self.convs[("pose_0")] = nn.Conv2d(num_input_features * 256, 256, 3, stride, 1)
+        self.convs[("pose_1")] = nn.Conv2d(256, 256, 3, stride, 1)
+        self.convs[("pose_2")] = nn.Conv2d(256, 6 * num_frames_to_predict_for, 1)
 
         self.relu = nn.ReLU()
 
-        self.net = nn.ModuleList(list(self.convs.values()))
+        # self.net = nn.ModuleList(list(self.convs.values()))
 
     def forward(self, input_features):
         last_features = [f[-1] for f in input_features]
@@ -40,7 +41,7 @@ class PoseDecoder(nn.Module):
 
         out = cat_features
         for i in range(3):
-            out = self.convs[("pose", i)](out)
+            out = self.convs["pose_{}".format(i)](out)
             if i != 2:
                 out = self.relu(out)
 

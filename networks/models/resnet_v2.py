@@ -40,6 +40,7 @@ class ResnetBase(nn.Module):
         self.conv1 = nn.Conv2d(
             num_input_images * 3, 64, kernel_size=7, stride=2, padding=3, bias=False)
         self.bn1 = model_resnet.bn1
+        self.relu = model_resnet.relu
         self.maxpool = model_resnet.maxpool
         self.layer1 = model_resnet.layer1
         self.layer2 = model_resnet.layer2

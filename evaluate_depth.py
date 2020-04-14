@@ -12,6 +12,8 @@ from utils import readlines
 from options import MonodepthOptions
 import datasets
 import networks
+from networks.models import resnet_encoder_dlf
+
 
 cv2.setNumThreads(0)  # This speeds up evaluation 5x on our unix systems (OpenCV 3.3.1)
 
@@ -86,7 +88,11 @@ def evaluate(opt):
         dataloader = DataLoader(dataset, 16, shuffle=False, num_workers=opt.num_workers,
                                 pin_memory=True, drop_last=False)
 
-        encoder = networks.ResnetEncoder(opt.num_layers, False)
+        if opt.using_v2:
+            encoder = networks.ResnetEncoder(opt.num_layers, False)
+        else:
+            encoder = resnet_encoder_dlf.ResNet_DLF(
+                opt.num_layers, opt.num_layers)
         depth_decoder = networks.DepthDecoder(encoder.num_ch_enc)
 
         model_dict = encoder.state_dict()
@@ -110,8 +116,10 @@ def evaluate(opt):
                 if opt.post_process:
                     # Post-processed results require each image to have two forward passes
                     input_color = torch.cat((input_color, torch.flip(input_color, [3])), 0)
-
-                output = depth_decoder(encoder(input_color))
+                if opt.using_v2:
+                    output = depth_decoder(encoder(input_color))
+                else:
+                    output = depth_decoder(encoder(input_color,input_color))
 
                 pred_disp, _ = disp_to_depth(output[("disp", 0)], opt.min_depth, opt.max_depth)
                 pred_disp = pred_disp.cpu()[:, 0].numpy()
@@ -163,7 +171,7 @@ def evaluate(opt):
         quit()
 
     gt_path = os.path.join(splits_dir, opt.eval_split, "gt_depths.npz")
-    gt_depths = np.load(gt_path, fix_imports=True, encoding='latin1')["data"]
+    gt_depths = np.load(gt_path, fix_imports=True, encoding='latin1', allow_pickle=True)["data"]
 
     print("-> Evaluating")
 

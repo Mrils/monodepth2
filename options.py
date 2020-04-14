@@ -28,6 +28,10 @@ class MonodepthOptions:
 
 
         # TRAINING options
+        self.parser.add_argument("--using_v2",
+                                 help="using the origin monodepth2 version if set",
+                                 action="store_true"
+        )
         self.parser.add_argument("--model_name",
                                  type=str,
                                  help="the name of the folder to save the model in",
