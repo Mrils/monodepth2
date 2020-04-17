@@ -43,9 +43,9 @@ class KITTIDataset(MonoDataset):
 
     def get_color(self, folder, frame_index, side, do_flip, seg=False):
         if seg:
-            color = self.loader(self.get_image_path(folder, frame_index, side),gray_mode=True)
+            color = self.loader(self.get_seg_path(folder, frame_index, side),gray_mode=True)
         else:
-            color = self.loader(self.get_seg_path(folder, frame_index, side))
+            color = self.loader(self.get_image_path(folder, frame_index, side))
 
         if do_flip:
             color = color.transpose(pil.FLIP_LEFT_RIGHT)
