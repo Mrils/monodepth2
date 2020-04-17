@@ -17,12 +17,17 @@ import torch.utils.data as data
 from torchvision import transforms
 
 
-def pil_loader(path):
+def pil_loader(path, gray_mode=False):
     # open path as file to avoid ResourceWarning
     # (https://github.com/python-pillow/Pillow/issues/835)
     with open(path, 'rb') as f:
         with Image.open(f) as img:
-            return img.convert('RGB')
+            if gray_mode:
+                img = img.convert('L')
+                return Image.merge('RGB',(img,img,img))
+            else:
+                return img.convert('RGB')
+
 
 
 class MonoDataset(data.Dataset):
@@ -80,10 +85,13 @@ class MonoDataset(data.Dataset):
             self.hue = 0.1
 
         self.resize = {}
+        self.seg_resize = {}
         for i in range(self.num_scales):
             s = 2 ** i
             self.resize[i] = transforms.Resize((self.height // s, self.width // s),
                                                interpolation=self.interp)
+            self.seg_resize[i] = transforms.Resize((self.height // s, self.width // s),
+                                               interpolation=Image.NEAREST)
 
         self.load_depth = self.check_depth()
 
@@ -100,6 +108,10 @@ class MonoDataset(data.Dataset):
                 n, im, i = k
                 for i in range(self.num_scales):
                     inputs[(n, im, i)] = self.resize[i](inputs[(n, im, i - 1)])
+            if "seg" in k:
+                n, im, i = k
+                for i in range(self.num_scales):
+                    inputs[(n, im, i)] = self.seg_resize[i](inputs[(n, im, i - 1)])
 
         for k in list(inputs):
             f = inputs[k]
@@ -107,6 +119,9 @@ class MonoDataset(data.Dataset):
                 n, im, i = k
                 inputs[(n, im, i)] = self.to_tensor(f)
                 inputs[(n + "_aug", im, i)] = self.to_tensor(color_aug(f))
+            if "seg" in k:
+                n, im, i = k
+                inputs[(n,im,i)] = self.to_tensor(f)
 
     def __len__(self):
         return len(self.filenames)
@@ -142,7 +157,7 @@ class MonoDataset(data.Dataset):
 
         line = self.filenames[index].split()
         folder = line[0]
-        seg_folder = folder.replace("data_00","seg")
+        # seg_folder = folder.replace("data_00","seg")
 
         if len(line) == 3:
             frame_index = int(line[1])
@@ -158,10 +173,10 @@ class MonoDataset(data.Dataset):
             if i == "s":
                 other_side = {"r": "l", "l": "r"}[side]
                 inputs[("color", i, -1)] = self.get_color(folder, frame_index, other_side, do_flip)
-                inputs[("seg",i,-1)] = self.get_color(seg_folder, frame_index, other_side, do_flip)
+                inputs[("seg", i, -1)] = self.get_color(folder, frame_index, other_side, do_flip, seg=True)
             else:
                 inputs[("color", i, -1)] = self.get_color(folder, frame_index + i, side, do_flip)
-                inputs[("seg",i,-1)] = self.get_color(seg_folder, frame_index + i, side, do_flip)
+                inputs[("seg", i, -1)] = self.get_color(folder, frame_index + i, side, do_flip, seg=True)
 
 
         # adjusting intrinsics to match each scale in the pyramid
@@ -187,6 +202,7 @@ class MonoDataset(data.Dataset):
         for i in self.frame_idxs:
             del inputs[("color", i, -1)]
             del inputs[("color_aug", i, -1)]
+            del inputs[("seg", i, -1)]
 
         if self.load_depth:
             depth_gt = self.get_depth(folder, frame_index, side, do_flip)

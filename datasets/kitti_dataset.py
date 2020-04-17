@@ -41,8 +41,11 @@ class KITTIDataset(MonoDataset):
 
         return os.path.isfile(velo_filename)
 
-    def get_color(self, folder, frame_index, side, do_flip):
-        color = self.loader(self.get_image_path(folder, frame_index, side))
+    def get_color(self, folder, frame_index, side, do_flip, seg=False):
+        if seg:
+            color = self.loader(self.get_image_path(folder, frame_index, side),gray_mode=True)
+        else:
+            color = self.loader(self.get_seg_path(folder, frame_index, side))
 
         if do_flip:
             color = color.transpose(pil.FLIP_LEFT_RIGHT)
@@ -60,6 +63,12 @@ class KITTIRAWDataset(KITTIDataset):
         f_str = "{:010d}{}".format(frame_index, self.img_ext)
         image_path = os.path.join(
             self.data_path, folder, "image_0{}/data".format(self.side_map[side]), f_str)
+        return image_path
+
+    def get_seg_path(self, folder, frame_index, side):
+        f_str = "{:010d}{}".format(frame_index, self.img_ext)
+        image_path = os.path.join(
+            self.data_path, folder, "seg", f_str)
         return image_path
 
     def get_depth(self, folder, frame_index, side, do_flip):
