@@ -69,6 +69,11 @@ class MonoDataset(data.Dataset):
         self.loader = pil_loader
         self.to_tensor = transforms.ToTensor()
 
+        for i in range(self.num_scales):
+            s = 2 ** i
+            self.seg_resize[i] = transforms.Resize((self.height // s, self.width // s),
+                                               interpolation=Image.NEAREST)
+
         # We need to specify augmentations differently in newer versions of torchvision.
         # We first try the newer tuple version; if this fails we fall back to scalars
         try:
@@ -89,9 +94,7 @@ class MonoDataset(data.Dataset):
         for i in range(self.num_scales):
             s = 2 ** i
             self.resize[i] = transforms.Resize((self.height // s, self.width // s),
-                                               interpolation=self.interp)
-            self.seg_resize[i] = transforms.Resize((self.height // s, self.width // s),
-                                               interpolation=Image.NEAREST)
+                                               interpolation=self.interp)            
 
         self.load_depth = self.check_depth()
 
