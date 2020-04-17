@@ -69,6 +69,7 @@ class MonoDataset(data.Dataset):
         self.loader = pil_loader
         self.to_tensor = transforms.ToTensor()
 
+        self.seg_resize = {}
         for i in range(self.num_scales):
             s = 2 ** i
             self.seg_resize[i] = transforms.Resize((self.height // s, self.width // s),
@@ -90,7 +91,6 @@ class MonoDataset(data.Dataset):
             self.hue = 0.1
 
         self.resize = {}
-        self.seg_resize = {}
         for i in range(self.num_scales):
             s = 2 ** i
             self.resize[i] = transforms.Resize((self.height // s, self.width // s),
