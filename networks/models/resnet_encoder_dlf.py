@@ -58,6 +58,7 @@ class ResNet_DLF(nn.Module):
         batch_size = x.size(0)
 
         features=[]
+        x = (x - 0.45) / 0.225
         x = self.base.conv1(x)
         seg = self.segnet.conv1(seg)
         x = self.base.bn1(x)
