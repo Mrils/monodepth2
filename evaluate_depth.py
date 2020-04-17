@@ -112,6 +112,7 @@ def evaluate(opt):
         with torch.no_grad():
             for data in dataloader:
                 input_color = data[("color", 0, 0)].cuda()
+                input_seg   = data[("seg",   0, 0)].cuda()
 
                 if opt.post_process:
                     # Post-processed results require each image to have two forward passes
@@ -119,7 +120,7 @@ def evaluate(opt):
                 if opt.using_v2:
                     output = depth_decoder(encoder(input_color))
                 else:
-                    output = depth_decoder(encoder(input_color,input_color))
+                    output = depth_decoder(encoder(input_color,input_seg))
 
                 pred_disp, _ = disp_to_depth(output[("disp", 0)], opt.min_depth, opt.max_depth)
                 pred_disp = pred_disp.cpu()[:, 0].numpy()
