@@ -13,6 +13,7 @@ from options import MonodepthOptions
 import datasets
 import networks
 from networks.models import resnet_encoder_dlf
+import torch.nn as nn
 
 
 cv2.setNumThreads(0)  # This speeds up evaluation 5x on our unix systems (OpenCV 3.3.1)
@@ -94,8 +95,11 @@ def evaluate(opt):
             encoder = resnet_encoder_dlf.ResNet_DLF(
                 opt.num_layers, opt.num_layers)
         depth_decoder = networks.DepthDecoder(encoder.num_ch_enc)
+        encoder = nn.DataParallel(encoder)
+        depth_decoder = nn.DataParallel(depth_decoder)
 
         model_dict = encoder.state_dict()
+        
         encoder.load_state_dict({k: v for k, v in encoder_dict.items() if k in model_dict})
         depth_decoder.load_state_dict(torch.load(decoder_path))
 

@@ -31,6 +31,7 @@ class ResNet_DLF(nn.Module):
     def __init__(self,base_model=18,base_seg_model=18, nums_input_images=1, adaptive_diated=True):
         super(ResNet_DLF, self).__init__()
         self.num_ch_enc = np.array([64, 64, 128, 256, 512])
+        self.num_ch_dec = np.array([16, 32, 64, 128, 256])
         if base_model > 34:
             self.num_ch_enc[1:] *= 4
         self.base = resnet_v2.ResnetBase(base_model, num_input_images=nums_input_images)

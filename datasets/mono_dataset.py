@@ -176,11 +176,17 @@ class MonoDataset(data.Dataset):
             if i == "s":
                 other_side = {"r": "l", "l": "r"}[side]
                 inputs[("color", i, -1)] = self.get_color(folder, frame_index, other_side, do_flip)
-                inputs[("seg", i, -1)] = self.get_color(folder, frame_index, other_side, do_flip, seg=True)
+            #    inputs[("seg", i, -1)] = self.get_color(folder, frame_index, other_side, do_flip, seg=True)
             else:
                 inputs[("color", i, -1)] = self.get_color(folder, frame_index + i, side, do_flip)
-                inputs[("seg", i, -1)] = self.get_color(folder, frame_index + i, side, do_flip, seg=True)
+           #     inputs[("seg", i, -1)] = self.get_color(folder, frame_index + i, side, do_flip, seg=True)
 
+        for i in self.frame_idxs:
+            if i == "s":
+                other_side = {"r": "l", "l": "r"}[side]
+                inputs[("seg", i, -1)] = self.get_color(folder, frame_index, other_side, do_flip, seg=True)
+            else:
+                inputs[("seg", i, -1)] = self.get_color(folder, frame_index + i, side, do_flip, seg=True)
 
         # adjusting intrinsics to match each scale in the pyramid
         for scale in range(self.num_scales):

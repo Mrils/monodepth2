@@ -28,10 +28,15 @@ class MonodepthOptions:
 
 
         # TRAINING options
-        self.parser.add_argument("--using_v2",
-                                 help="using the origin monodepth2 version if set",
+        self.parser.add_argument("--using_dlf",
+                                 help="using the dlf's inputs if set",
                                  action="store_true"
         )
+        self.parser.add_argument("--backbone",
+                                 type=str,
+                                 help="the backbone name for the encoder network",
+                                 default="resnet",
+                                 choices=["resnet", "resnet_dlf", "efficientnet"])
         self.parser.add_argument("--model_name",
                                  type=str,
                                  help="the name of the folder to save the model in",

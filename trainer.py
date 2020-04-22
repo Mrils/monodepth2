@@ -27,7 +27,7 @@ import networks
 from IPython import embed
 
 from networks.models import resnet_encoder_dlf
-
+from networks.models import EfficientNet
 
 class data_prefetcher():
     def __init__(self, loader):
@@ -83,17 +83,18 @@ class Trainer:
         if self.opt.use_stereo:
             self.opt.frame_ids.append("s")
 
-        if self.opt.using_v2:
-            self.models["encoder"] = networks.ResnetEncoder(
-                self.opt.num_layers, self.opt.weights_init == "pretrained")
-        else:
-            self.models["encoder"] = resnet_encoder_dlf.ResNet_DLF(
-                self.opt.num_layers, self.opt.num_layers)
+        # if self.opt.using_v2:
+        #     self.models["encoder"] = networks.ResnetEncoder(
+        #         self.opt.num_layers, self.opt.weights_init == "pretrained")
+        # else:
+        #     self.models["encoder"] = resnet_encoder_dlf.ResNet_DLF(
+        #         self.opt.num_layers, self.opt.num_layers)
+        self.models["encoder"] = self.get_encoder()
         # self.models["encoder"].to(self.device)
         self.parameters_to_train += list(self.models["encoder"].parameters())
 
         self.models["depth"] = networks.DepthDecoder(
-            self.models["encoder"].num_ch_enc, self.opt.scales)
+            self.models["encoder"].num_ch_enc, self.models["encoder"].num_ch_dec, self.opt.scales)
         # self.models["depth"].to(self.device)
         self.parameters_to_train += list(self.models["depth"].parameters())
 
@@ -209,6 +210,18 @@ class Trainer:
 
         self.save_opts()
 
+    def get_encoder(self):
+        if self.opt.backbone == "resnet":
+            model = networks.ResnetEncoder(
+                self.opt.num_layers, self.opt.weights_init == "pretrained")
+        elif self.opt.backbone == "resnet_dlf":
+            model = resnet_encoder_dlf.ResNet_DLF(
+                self.opt.num_layers, self.opt.num_layers)
+        elif self.opt.backbone == "efficientnet":
+            model = EfficientNet.EffNet_DLF(
+                model_name='efficientnet-b4')
+        return model
+
     def set_train(self):
         """Convert all models to training mode
         """
@@ -239,7 +252,6 @@ class Trainer:
         self.set_train()
 
         for batch_idx, inputs in enumerate(self.train_loader):
-
             before_op_time = time.time()
 
             outputs, losses = self.process_batch(inputs)
@@ -287,10 +299,11 @@ class Trainer:
             outputs = self.models["depth"](features[0])
         else:
             # Otherwise, we only feed the image with frame_id 0 through the depth encoder
-            if self.opt.using_v2:
-                features = self.models["encoder"](inputs["color_aug", 0, 0])
-            else:
+            if self.opt.using_dlf:
                 features = self.models["encoder"](inputs["color_aug", 0, 0], inputs["seg", 0, 0])
+            else:
+                features = self.models["encoder"](inputs["color_aug", 0, 0])
+
             outputs = self.models["depth"](features)
 
         if self.opt.predictive_mask:

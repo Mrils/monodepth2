@@ -15,7 +15,7 @@ from layers import *
 
 
 class DepthDecoder(nn.Module):
-    def __init__(self, num_ch_enc, scales=range(4), num_output_channels=1, use_skips=True):
+    def __init__(self, num_ch_enc, num_ch_dec, scales=range(4), num_output_channels=1, use_skips=True):
         super(DepthDecoder, self).__init__()
 
         self.num_output_channels = num_output_channels
@@ -24,7 +24,8 @@ class DepthDecoder(nn.Module):
         self.scales = scales
 
         self.num_ch_enc = num_ch_enc
-        self.num_ch_dec = np.array([16, 32, 64, 128, 256])
+        # self.num_ch_dec = np.array([16, 32, 64, 128, 256])
+        self.num_ch_dec = num_ch_dec
 
         # decoder
         self.convs = nn.ModuleDict()
@@ -40,6 +41,7 @@ class DepthDecoder(nn.Module):
             num_ch_in = self.num_ch_dec[i]
             if self.use_skips and i > 0:
                 num_ch_in += self.num_ch_enc[i - 1]
+                # num_ch_in *= 2
             num_ch_out = self.num_ch_dec[i]
             self.convs["upconv_{}_1".format(i)] = ConvBlock(num_ch_in, num_ch_out)
 
