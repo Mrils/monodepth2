@@ -29,9 +29,6 @@ from IPython import embed
 from networks.models import resnet_encoder_dlf
 from networks.models import EfficientNet
 
-import torch.distributed as dist
-from apex.parallel import DistributedDataParallel as DDP
-from apex import amp
 
 class data_prefetcher():
     def __init__(self, loader):
@@ -63,9 +60,8 @@ class data_prefetcher():
             self.next_input = self.next_input.sub_(self.mean).div_(self.std)
 
 class Trainer:
-    def __init__(self, gpu, ngpus_per_node, options):
+    def __init__(self, options):
         self.opt = options
-        self.opt.gpu = gpu
 
         self.log_path = os.path.join(self.opt.log_dir, self.opt.model_name)
 
@@ -75,11 +71,6 @@ class Trainer:
 
         self.models = {}
         self.parameters_to_train = []
-
-        if self.opt.multi_gpu:
-            self.opt.rank = self.opt.rank * ngpus_per_node + gpu
-            dist.init_process_group(backend=self.opt.dist_backend, init_method=self.opt.dist_url,
-                            world_size=self.opt.world_size, rank=self.opt.rank)
 
         self.device = torch.device("cpu" if self.opt.no_cuda else "cuda")
 
@@ -101,18 +92,10 @@ class Trainer:
         #     self.models["encoder"] = resnet_encoder_dlf.ResNet_DLF(
         #         self.opt.num_layers, self.opt.num_layers)
         self.models["encoder"] = self.get_encoder()
-        self.models["encoder"].to(self.device)
-        if self.opt.multi_gpu:
-            self.models["encoder"] = DDP(
-                self.models["encoder"],  device_ids=[self.opt.gpu], broadcast_buffers=False, find_unused_parameters=True) ## Multiple GPU
         self.parameters_to_train += list(self.models["encoder"].parameters())
 
         self.models["depth"] = networks.DepthDecoder(
             self.models["encoder"].num_ch_enc, self.models["encoder"].num_ch_dec, self.opt.scales)
-        self.models["depth"].to(self.device)
-        if self.opt.multi_gpu:
-            self.models["depth"] = DDP(
-                self.models["depth"],  device_ids=[self.opt.gpu], broadcast_buffers=False, find_unused_parameters=True) ## Multiple GPU
         self.parameters_to_train += list(self.models["depth"].parameters())
 
 
@@ -123,18 +106,13 @@ class Trainer:
                     self.opt.weights_init == "pretrained",
                     num_input_images=self.num_pose_frames)
 
-                self.models["pose_encoder"].to(self.device)
-                if self.opt.multi_gpu:
-                    self.models["pose_encoder"] = DDP(
-                        self.models["pose_encoder"],  device_ids=[self.opt.gpu], broadcast_buffers=False, find_unused_parameters=True) ## Multiple GPU
-
 
                 self.models["pose"] = networks.PoseDecoder(
                     self.models["pose_encoder"].num_ch_enc,
                     num_input_features=1,
                     num_frames_to_predict_for=2)
                 
-                # self.models["pose_encoder"] = nn.DataParallel(self.models["pose_encoder"]).cuda()
+                self.models["pose_encoder"] = nn.DataParallel(self.models["pose_encoder"]).cuda()
                 self.parameters_to_train += list(self.models["pose_encoder"].parameters())
 
             elif self.opt.pose_model_type == "shared":
@@ -145,11 +123,7 @@ class Trainer:
                 self.models["pose"] = networks.PoseCNN(
                     self.num_input_frames if self.opt.pose_model_input == "all" else 2)
 
-            # self.models["pose"] = nn.DataParallel(self.models["pose"]).cuda()
-            self.models["pose"].to(self.device)
-            if self.opt.multi_gpu:
-                self.models["pose"] = DDP(
-                    self.models["pose"],  device_ids=[self.opt.gpu], broadcast_buffers=False, find_unused_parameters=True) ## Multiple GPU
+            self.models["pose"] = nn.DataParallel(self.models["pose"]).cuda()
             self.parameters_to_train += list(self.models["pose"].parameters())
 
         if self.opt.predictive_mask:
@@ -164,8 +138,8 @@ class Trainer:
             self.models["predictive_mask"].to(self.device)
             self.parameters_to_train += list(self.models["predictive_mask"].parameters())
 
-        # self.models["encoder"] = nn.DataParallel(self.models["encoder"]).cuda()
-        # self.models["depth"] = nn.DataParallel(self.models["depth"]).cuda()
+        self.models["encoder"] = nn.DataParallel(self.models["encoder"]).cuda()
+        self.models["depth"] = nn.DataParallel(self.models["depth"]).cuda()
         self.model_optimizer = optim.Adam(self.parameters_to_train, self.opt.learning_rate)
         self.model_lr_scheduler = optim.lr_scheduler.StepLR(
             self.model_optimizer, self.opt.scheduler_step_size, 0.1)
@@ -188,9 +162,6 @@ class Trainer:
         val_filenames = readlines(fpath.format("val"))
         img_ext = '.png' if self.opt.png else '.jpg'
 
-        if self.opt.multi_gpu:
-            self.opt.batch_size = int(self.opt.batch_size / ngpus_per_node)
-            self.opt.num_workers = int(self.opt.num_workers / ngpus_per_node)
 
         num_train_samples = len(train_filenames)
         self.num_total_steps = num_train_samples // self.opt.batch_size * self.opt.num_epochs
@@ -198,19 +169,15 @@ class Trainer:
         train_dataset = self.dataset(
             self.opt.data_path, train_filenames, self.opt.height, self.opt.width,
             self.opt.frame_ids, 4, is_train=True, img_ext=img_ext)
-        if self.opt.multi_gpu:
-            train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
-        else:
-            train_sampler = None
         self.train_loader = DataLoader(
-            train_dataset, self.opt.batch_size, shuffle=(train_sampler is None),
-            num_workers=self.opt.num_workers, pin_memory=True, drop_last=True，sampler=train_sampler)
+            train_dataset, self.opt.batch_size, True,
+            num_workers=self.opt.num_workers, pin_memory=True, drop_last=True)
             
         val_dataset = self.dataset(
             self.opt.data_path, val_filenames, self.opt.height, self.opt.width,
             self.opt.frame_ids, 4, is_train=False, img_ext=img_ext)
         self.val_loader = DataLoader(
-            val_dataset, self.opt.batch_size, shuffle=(train_sampler is None),
+            val_dataset, self.opt.batch_size, True,
             num_workers=self.opt.num_workers, pin_memory=True, drop_last=True)
         self.val_iter = iter(self.val_loader)
 
@@ -278,8 +245,6 @@ class Trainer:
             if (self.epoch + 1) % self.opt.save_frequency == 0:
                 self.save_model()
         
-        if self.opt.multi_gpu:
-            dist.destroy_process_group()
 
     def run_epoch(self):
         """Run a single epoch of training and validation
