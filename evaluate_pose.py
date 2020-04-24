@@ -10,6 +10,7 @@ import os
 import numpy as np
 
 import torch
+import torch.nn as nn
 from torch.utils.data import DataLoader
 
 from layers import transformation_from_parameters
@@ -70,14 +71,16 @@ def evaluate(opt):
     pose_decoder_path = os.path.join(opt.load_weights_folder, "pose.pth")
 
     pose_encoder = networks.ResnetEncoder(opt.num_layers, False, 2)
-    pose_encoder.load_state_dict(torch.load(pose_encoder_path))
-
     pose_decoder = networks.PoseDecoder(pose_encoder.num_ch_enc, 1, 2)
+
+    pose_encoder = nn.DataParallel(pose_encoder).cuda()
+    pose_encoder.load_state_dict(torch.load(pose_encoder_path))
+    pose_decoder = nn.DataParallel(pose_decoder).cuda()
     pose_decoder.load_state_dict(torch.load(pose_decoder_path))
 
-    pose_encoder.cuda()
+    # pose_encoder.cuda()
     pose_encoder.eval()
-    pose_decoder.cuda()
+    # pose_decoder.cuda()
     pose_decoder.eval()
 
     pred_poses = []

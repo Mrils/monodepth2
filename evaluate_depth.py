@@ -18,6 +18,7 @@ from networks.models import resnet_encoder_dlf
 from networks.models import EfficientNet
 
 
+
 cv2.setNumThreads(0)  # This speeds up evaluation 5x on our unix systems (OpenCV 3.3.1)
 
 
@@ -59,7 +60,6 @@ def batch_post_process_disparity(l_disp, r_disp):
     l_mask = (1.0 - np.clip(20 * (l - 0.05), 0, 1))[None, ...]
     r_mask = l_mask[:, :, ::-1]
     return r_mask * l_disp + l_mask * r_disp + (1.0 - l_mask - r_mask) * m_disp
-
 
 def get_encoder(opt):
         if opt.backbone == "resnet":
@@ -131,12 +131,10 @@ def evaluate(opt):
                 if opt.post_process:
                     # Post-processed results require each image to have two forward passes
                     input_color = torch.cat((input_color, torch.flip(input_color, [3])), 0)
-
                 if opt.using_dlf:
-                    output = depth_decoder(encoder(input_color,input_seg))
+                    output = depth_decoder(encoder(input_color, input_seg))
                 else:
                     output = depth_decoder(encoder(input_color))
-                    
 
                 pred_disp, _ = disp_to_depth(output[("disp", 0)], opt.min_depth, opt.max_depth)
                 pred_disp = pred_disp.cpu()[:, 0].numpy()
