@@ -85,7 +85,8 @@ class Trainer:
             for epoch in range(1, 5):
                 for batch_idx, data in enumerate(self.train_loader): # 不断load
                     if(batch_idx > 1000):
-                        break
+                        if(batch_idx > 1000):
+                            break
             end = time.time()
             print("Finish with:{} second, num_workers={}".format(end-start,num_workers))
 
