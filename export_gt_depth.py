@@ -49,7 +49,7 @@ def export_gt_depths_kitti():
             gt_depth = generate_depth_map(calib_dir, velo_filename, 2, True)
         elif opt.split == "eigen_benchmark":
             gt_depth_path = os.path.join(opt.data_path, folder, "proj_depth",
-                                         "groundtruth", "image_02", "{:010d}.png".format(frame_id))
+                                         "groundtruth", "image_02", "{:010d}.jpg".format(frame_id))
             gt_depth = np.array(pil.open(gt_depth_path)).astype(np.float32) / 256
 
         gt_depths.append(gt_depth.astype(np.float32))

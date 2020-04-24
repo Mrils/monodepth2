@@ -26,6 +26,42 @@ class MonodepthOptions:
                                  help="log directory",
                                  default=os.path.join(os.path.expanduser("~"), "tmp"))
 
+        #MULTI-GPU options
+        self.parser.add_argument("--gpu_devices",
+                                 nargs="+",
+                                 type=int,
+                                 help="the id of gpus",
+                                 default=[13,14,15])
+        self.parser.add_argument('-multi_gpu', '--multi_gpu', 
+                                 help='using DDP if set',
+                                 action="store_true")
+        self.parser.add_argument('-ng', '--ngpus_per_node', 
+                                 default=1, 
+                                 type=int,
+                                 help='number of gpus per node')
+        self.parser.add_argument('-g', '--gpu', 
+                                 default=0, 
+                                 type=int,
+                                 help='the id of gpu')
+        self.parser.add_argument('-r','--rank', 
+                                default=0, 
+                                type=int,
+                                help='ranking within the nodes')
+        self.parser.add_argument('--world_size', 
+                                default=1, 
+                                type=int,
+                                help='world_size')
+        self.parser.add_argument('-db','--dist_backend', 
+                                default="nccl", 
+                                type=str,
+                                help='the backend with DDP',
+                                choices=["nccl", "gloo", "mpi"]) 
+        self.parser.add_argument('-url','--dist_url', 
+                                default="env://", 
+                                type=str,
+                                help='init_method')
+         
+
 
         # TRAINING options
         self.parser.add_argument("--using_dlf",
@@ -36,7 +72,7 @@ class MonodepthOptions:
                                  type=str,
                                  help="the backbone name for the encoder network",
                                  default="resnet",
-                                 choices=["resnet", "resnet_dlf", "efficientnet"])
+                                 choices=["resnet", "resnet_dlf", "efficientnet"])                
         self.parser.add_argument("--model_name",
                                  type=str,
                                  help="the name of the folder to save the model in",
