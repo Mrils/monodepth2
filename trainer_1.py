@@ -50,10 +50,6 @@ class Trainer:
 
         assert self.opt.frame_ids[0] == 0, "frame_ids must start with 0"
 
-
-        if self.opt.load_weights_folder is not None:
-            self.load_model()
-
         print("Training model named:\n  ", self.opt.model_name)
         print("Models and tensorboard events files are saved to:\n  ", self.opt.log_dir)
         print("Training is using:\n  ", self.device)
@@ -88,7 +84,8 @@ class Trainer:
             start = time.time()
             for epoch in range(1, 5):
                 for batch_idx, data in enumerate(self.train_loader): # 不断load
-                    pass
+                    if(batch_idx > 1000):
+                        break
             end = time.time()
             print("Finish with:{} second, num_workers={}".format(end-start,num_workers))
 
