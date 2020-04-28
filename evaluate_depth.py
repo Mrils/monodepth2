@@ -104,7 +104,7 @@ def evaluate(opt):
                                 pin_memory=True, drop_last=False)
 
         encoder = get_encoder(opt)
-        depth_decoder = networks.DepthDecoder(encoder.num_ch_enc, encoder.num_ch_dec)
+        depth_decoder = networks.DepthDecoder(encoder.num_ch_enc, encoder.num_ch_dec, has_se=opt.using_se)
         encoder = nn.DataParallel(encoder)
         depth_decoder = nn.DataParallel(depth_decoder)
 

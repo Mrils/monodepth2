@@ -12,16 +12,17 @@ import torch.nn as nn
 
 from collections import OrderedDict
 from layers import *
-
+from networks.models import selayer
 
 class DepthDecoder(nn.Module):
-    def __init__(self, num_ch_enc, num_ch_dec, scales=range(4), num_output_channels=1, use_skips=True):
+    def __init__(self, num_ch_enc, num_ch_dec, scales=range(4), num_output_channels=1, use_skips=True, has_se=False):
         super(DepthDecoder, self).__init__()
 
         self.num_output_channels = num_output_channels
         self.use_skips = use_skips
         self.upsample_mode = 'nearest'
         self.scales = scales
+        self.has_se = has_se
 
         self.num_ch_enc = num_ch_enc
         # self.num_ch_dec = np.array([16, 32, 64, 128, 256])
@@ -44,6 +45,8 @@ class DepthDecoder(nn.Module):
                 # num_ch_in *= 2
             num_ch_out = self.num_ch_dec[i]
             self.convs["upconv_{}_1".format(i)] = ConvBlock(num_ch_in, num_ch_out)
+            if self.has_se:
+                self.convs["se_{}".format(i)] = selayer.SElayer(num_ch_in)
 
         for s in self.scales:
             self.convs["dispconv_{}".format(s)] = Conv3x3(self.num_ch_dec[s], self.num_output_channels)
@@ -62,7 +65,10 @@ class DepthDecoder(nn.Module):
             if self.use_skips and i > 0:
                 x += [input_features[i - 1]]
             x = torch.cat(x, 1)
+            if self.has_se:
+                x = self.convs["se_{}".format(i)](x)
             x = self.convs["upconv_{}_1".format(i)](x)
+           
             if i in self.scales:
                 self.outputs[("disp", i)] = self.sigmoid(self.convs["dispconv_{}".format(i)](x))
 

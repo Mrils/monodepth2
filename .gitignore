@@ -7,3 +7,4 @@ kitti_data
 logs
 kitti_odom
 nohup.out
+log
