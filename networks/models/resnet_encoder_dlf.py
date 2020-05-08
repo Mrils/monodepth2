@@ -8,6 +8,7 @@ import torchvision.models as models
 import torch.utils.model_zoo as model_zoo
 
 from networks.models import resnet_v2
+from networks.models import selayer
 
 def dynamic_local_filtering(x, seg, dilated=1):
     padding = nn.ReflectionPad2d(dilated)  # ConstantPad2d(1, 0)
@@ -71,16 +72,16 @@ class ResNet_DLF(nn.Module):
         x = self.base.maxpool(x)
         seg = self.segnet.maxpool(seg)
 
-        x = self.base.layer1(x)
+        x = self.base.layer["layer_1"](x)
         features.append(x)
 
-        seg = self.segnet.layer1(seg)
+        seg = self.segnet.layer["layer_1"](seg)
         # x = dynamic_local_filtering(x, seg, dilated=1) + dynamic_local_filtering(x, seg, dilated=2) + dynamic_local_filtering(x, seg, dilated=3)
 
-        x = self.base.layer2(x)
+        x = self.base.layer["layer_2"](x)
         features.append(x)
 
-        seg = self.segnet.layer2(seg)
+        seg = self.segnet.layer["layer_2"](seg)
 
         if self.adaptive_diated:
             weight = self.adaptive_layers(x).reshape(-1, x.size()[1], 1, 3)
@@ -98,8 +99,8 @@ class ResNet_DLF(nn.Module):
         # if self.drop_channel:
         #     x = self.dropout_channel(x)
 
-        x = self.base.layer3(x)
-        seg = self.segnet.layer3(seg)
+        x = self.base.layer["layer_3"](x)
+        seg = self.segnet.layer["layer_3"](seg)
 
         if self.adaptive_diated:
             weight = self.adaptive_layers1(x).reshape(-1, x.size()[1], 1, 3)
@@ -112,14 +113,66 @@ class ResNet_DLF(nn.Module):
         else:
             x = x * seg
         features.append(x)
-        x = self.base.layer4(x)
-        seg = self.segnet.layer4(seg)
+        x = self.base.layer["layer_4"](x)
+        seg = self.segnet.layer["layer_4"](seg)
         x = x * seg
         features.append(x)
 
 
         return features
 
+class ResNet_SE(nn.Module):
+    def __init__(self,base_model=18,base_seg_model=18, nums_input_images=1, using_se=True, se_layers=[4,3,2,1]):
+        super(ResNet_SE, self).__init__()
+        self.num_ch_enc = np.array([64, 64, 128, 256, 512])
+        self.num_ch_dec = np.array([16, 32, 64, 128, 256])
+        if base_model > 34:
+            self.num_ch_enc[1:] *= 4
+        self.base = resnet_v2.ResnetBase(base_model, num_input_images=nums_input_images)
+        self.segnet = resnet_v2.ResnetBase(base_seg_model, num_input_images=nums_input_images)
+        self.using_se = using_se
+        self.se_layers = se_layers
+        print(se_layers)
+        
+        if self.using_se:
+            self.se = nn.ModuleDict()
+            self.shrink = nn.ModuleDict()
+            for index, layer in enumerate(self.num_ch_enc):
+                if index in self.se_layers:
+                    print(index)
+                    self.se["se_{}".format(index)] = selayer.SElayer(layer*2)
+                    self.shrink["shrink_{}".format(index)] = nn.Conv2d(layer*2,layer,1)
+
+
+    def forward(self,x,seg):
+        batch_size = x.size(0)
+
+        features=[]
+        x = (x - 0.45) / 0.225
+        x = self.base.conv1(x)
+        seg = self.segnet.conv1(seg)
+        x = self.base.bn1(x)
+        seg = self.segnet.bn1(seg)
+        x = self.base.relu(x)
+        seg = self.segnet.relu(seg)
+
+        features.append(x)
+
+        x = self.base.maxpool(x)
+        seg = self.segnet.maxpool(seg)
+        
+
+        for i in range(1,5):
+            x = self.base.layer["layer_{}".format(i)](x)
+            seg = self.segnet.layer["layer_{}".format(i)](seg)
+            if self.using_se and i in self.se_layers:
+                x = torch.cat((x,seg),dim=1)
+                x = self.se["se_{}".format(i)](x)
+                x = self.shrink["shrink_{}".format(i)](x)
+                # print(x.shape)
+            features.append(x)
+
+        return features
 
 
         

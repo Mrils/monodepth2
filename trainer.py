@@ -220,6 +220,9 @@ class Trainer:
         elif self.opt.backbone == "efficientnet":
             model = EfficientNet.EffNet_DLF(
                 model_name='efficientnet-b4')
+        elif self.opt.backbone == "resnet_SE":
+            model = resnet_encoder_dlf.ResNet_SE(
+                self.opt.num_layers, self.opt.num_layers, se_layers=self.opt.se_layers)
         return model
 
     def set_train(self):
@@ -300,7 +303,7 @@ class Trainer:
             outputs = self.models["depth"](features[0])
         else:
             # Otherwise, we only feed the image with frame_id 0 through the depth encoder
-            if self.opt.using_dlf:
+            if self.opt.using_seg:
                 features = self.models["encoder"](inputs["color_aug", 0, 0], inputs["seg", 0, 0])
             else:
                 features = self.models["encoder"](inputs["color_aug", 0, 0])

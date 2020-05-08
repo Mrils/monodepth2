@@ -42,10 +42,11 @@ class ResnetBase(nn.Module):
         self.bn1 = model_resnet.bn1
         self.relu = model_resnet.relu
         self.maxpool = model_resnet.maxpool
-        self.layer1 = model_resnet.layer1
-        self.layer2 = model_resnet.layer2
-        self.layer3 = model_resnet.layer3
-        self.layer4 = model_resnet.layer4
+        self.layer = nn.ModuleDict()
+        self.layer["layer_1"] = model_resnet.layer1
+        self.layer["layer_2"] = model_resnet.layer2
+        self.layer["layer_3"] = model_resnet.layer3
+        self.layer["layer_4"] = model_resnet.layer4
 
     def forward(self,x):
         x = self.conv1(x)
@@ -53,10 +54,10 @@ class ResnetBase(nn.Module):
         x = self.relu(x)
         x = self.maxpool(x)
 
-        x = self.layer1(x)
-        x = self.layer2(x)
-        x = self.layer3(x)
-        x = self.layer4(x)
+        x = self.layer["layer_1"](x)
+        x = self.layer["layer_2"](x)
+        x = self.layer["layer_3"](x)
+        x = self.layer["layer_4"](x)
 
         return x
 

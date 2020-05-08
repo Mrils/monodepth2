@@ -71,6 +71,9 @@ def get_encoder(opt):
         elif opt.backbone == "efficientnet":
             model = EfficientNet.EffNet_DLF(
                 model_name='efficientnet-b4')
+        elif self.opt.backbone == "resnet_SE":
+            model = resnet_encoder_dlf.ResNet_SE(
+                opt.num_layers, opt.num_layers)
         return model
 
 def evaluate(opt):
@@ -131,7 +134,7 @@ def evaluate(opt):
                 if opt.post_process:
                     # Post-processed results require each image to have two forward passes
                     input_color = torch.cat((input_color, torch.flip(input_color, [3])), 0)
-                if opt.using_dlf:
+                if opt.using_seg:
                     output = depth_decoder(encoder(input_color, input_seg))
                 else:
                     output = depth_decoder(encoder(input_color))

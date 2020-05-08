@@ -27,8 +27,13 @@ class MonodepthOptions:
                                  default=os.path.join(os.path.expanduser("~"), "tmp"))
 
         # TRAINING options
-        self.parser.add_argument("--using_dlf",
-                                 help="using the dlf's inputs if set",
+        self.parser.add_argument("--se_layers",
+                                 nargs="+",
+                                 type=int,
+                                 help="the layers using selayer in resnet_modules",
+                                 default=[4,3,2,1])
+        self.parser.add_argument("--using_seg",
+                                 help="using the seg's inputs if set",
                                  action="store_true"
         )
         self.parser.add_argument("--using_se",
@@ -39,7 +44,7 @@ class MonodepthOptions:
                                  type=str,
                                  help="the backbone name for the encoder network",
                                  default="resnet",
-                                 choices=["resnet", "resnet_dlf", "efficientnet"])                
+                                 choices=["resnet", "resnet_dlf", "efficientnet", "resnet_SE"])                
         self.parser.add_argument("--model_name",
                                  type=str,
                                  help="the name of the folder to save the model in",
