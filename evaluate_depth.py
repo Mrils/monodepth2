@@ -71,7 +71,7 @@ def get_encoder(opt):
         elif opt.backbone == "efficientnet":
             model = EfficientNet.EffNet_DLF(
                 model_name='efficientnet-b4')
-        elif self.opt.backbone == "resnet_SE":
+        elif opt.backbone == "resnet_SE":
             model = resnet_encoder_dlf.ResNet_SE(
                 opt.num_layers, opt.num_layers)
         return model
