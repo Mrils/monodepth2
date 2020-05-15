@@ -134,10 +134,13 @@ def evaluate(opt):
                 if opt.post_process:
                     # Post-processed results require each image to have two forward passes
                     input_color = torch.cat((input_color, torch.flip(input_color, [3])), 0)
-                if opt.using_seg:
-                    output = depth_decoder(encoder(input_color, input_seg))
+                if self.opt.using_inputs:
+                    if self.opt.using_seg:
+                        features = self.models["encoder"](input_color, input_seg)
+                    else:
+                        features = self.models["encoder"](input_color, input_color)
                 else:
-                    output = depth_decoder(encoder(input_color))
+                    features = self.models["encoder"](input_color)
 
                 pred_disp, _ = disp_to_depth(output[("disp", 0)], opt.min_depth, opt.max_depth)
                 pred_disp = pred_disp.cpu()[:, 0].numpy()

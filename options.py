@@ -36,6 +36,10 @@ class MonodepthOptions:
                                  help="using the seg's inputs if set",
                                  action="store_true"
         )
+        self.parser.add_argument("--using_inputs",
+                                 help="treat color as segment inputs",
+                                 action="store_true"
+        )
         self.parser.add_argument("--using_se",
                                  help="using the selayer if set",
                                  action="store_true"

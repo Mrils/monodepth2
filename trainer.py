@@ -303,8 +303,11 @@ class Trainer:
             outputs = self.models["depth"](features[0])
         else:
             # Otherwise, we only feed the image with frame_id 0 through the depth encoder
-            if self.opt.using_seg:
-                features = self.models["encoder"](inputs["color_aug", 0, 0], inputs["seg", 0, 0])
+            if self.opt.using_inputs:
+                if self.opt.using_seg:
+                    features = self.models["encoder"](inputs["color_aug", 0, 0], inputs["seg", 0, 0])
+                else:
+                    features = self.models["encoder"](inputs["color_aug", 0, 0], inputs["color_aug", 0, 0])
             else:
                 features = self.models["encoder"](inputs["color_aug", 0, 0])
 

@@ -132,14 +132,12 @@ class ResNet_SE(nn.Module):
         self.segnet = resnet_v2.ResnetBase(base_seg_model, num_input_images=nums_input_images)
         self.using_se = using_se
         self.se_layers = se_layers
-        print(se_layers)
         
         if self.using_se:
             self.se = nn.ModuleDict()
             self.shrink = nn.ModuleDict()
             for index, layer in enumerate(self.num_ch_enc):
                 if index in self.se_layers:
-                    print(index)
                     self.se["se_{}".format(index)] = selayer.SElayer(layer*2)
                     self.shrink["shrink_{}".format(index)] = nn.Conv2d(layer*2,layer,1)
 
@@ -149,6 +147,7 @@ class ResNet_SE(nn.Module):
 
         features=[]
         x = (x - 0.45) / 0.225
+        seg = (seg - 0.45) / 0.225
         x = self.base.conv1(x)
         seg = self.segnet.conv1(seg)
         x = self.base.bn1(x)
